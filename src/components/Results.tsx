@@ -1,12 +1,12 @@
+import type { CSSProperties } from "react";
 import type { Attempt } from "../types";
+import { formatDateTime } from "../lib/format";
 import { Markdown } from "./Markdown";
 
 interface Props {
   attempt: Attempt;
-  // When shown right after finishing a quiz:
   onRetake?: () => void;
   onHome: () => void;
-  // Label for the secondary button (default "Home").
   backLabel?: string;
 }
 
@@ -18,20 +18,28 @@ function scoreClass(pct: number): string {
 
 export function Results({ attempt, onRetake, onHome, backLabel = "Home" }: Props) {
   const { correctCount, total, scorePct } = attempt;
+  const wrong = total - correctCount;
+  const donutStyle = { ["--pct" as string]: scorePct } as CSSProperties;
+
   return (
     <div className="results">
       <div className="card score-card">
-        <div className={`score-ring ${scoreClass(scorePct)}`}>
-          <span className="score-pct">{scorePct}%</span>
+        <div className="donut" style={donutStyle}>
+          <div className="donut-center">
+            <span className={`donut-pct ${scoreClass(scorePct)}`}>{scorePct}%</span>
+          </div>
         </div>
         <div className="score-detail">
           <h2>{attempt.quizTitle}</h2>
-          <p className="score-line">
-            {correctCount} / {total} correct
-          </p>
-          <p className="score-date">
-            {new Date(attempt.finishedAt).toLocaleString()}
-          </p>
+          <div className="legend">
+            <span className="legend-item">
+              <span className="dot dot-good" /> {correctCount} correct
+            </span>
+            <span className="legend-item">
+              <span className="dot dot-bad" /> {wrong} wrong
+            </span>
+          </div>
+          <p className="score-date">{formatDateTime(attempt.finishedAt)}</p>
         </div>
       </div>
 
@@ -59,12 +67,22 @@ export function Results({ attempt, onRetake, onHome, backLabel = "Home" }: Props
             <p className="breakdown-prompt">
               <Markdown text={r.prompt} />
             </p>
-            <p className="breakdown-answers">
-              <span>Your answer: <strong>{r.selected.join(", ") || "—"}</strong></span>
+            <div className="answer-rows">
+              <div className="answer-row">
+                <span className="answer-label">Your answer</span>
+                <span className="answer-value">
+                  {(r.selectedText ?? r.selected).join("; ") || "—"}
+                </span>
+              </div>
               {!r.isCorrect && (
-                <span> · Correct: <strong>{r.correct.join(", ")}</strong></span>
+                <div className="answer-row">
+                  <span className="answer-label answer-label-ok">Correct answer</span>
+                  <span className="answer-value">
+                    {(r.correctText ?? r.correct).join("; ")}
+                  </span>
+                </div>
               )}
-            </p>
+            </div>
           </li>
         ))}
       </ol>

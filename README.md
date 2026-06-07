@@ -44,3 +44,15 @@ npm run preview  # preview the production build locally
 
 Pushing to `main` triggers the GitHub Actions workflow in `.github/workflows/deploy.yml`,
 which builds and publishes to GitHub Pages.
+
+## Disclaimer
+
+PrepNow is an independent, open-source study tool. It is **not affiliated with, authorized,
+sponsored, or endorsed by ServiceNow, Inc.** "ServiceNow", "Now Platform", and related marks
+are trademarks of ServiceNow, Inc., used here only descriptively to indicate the subject matter
+of the question content. The app itself is course-agnostic and works with any compatible
+question bank.
+
+## License
+
+Code is released under the [MIT License](LICENSE).

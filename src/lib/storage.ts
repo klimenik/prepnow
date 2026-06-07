@@ -33,8 +33,8 @@ export function clearAttempts(): void {
   saveAll([]);
 }
 
-export function exportAttempts(): void {
-  const data = JSON.stringify(loadAttempts(), null, 2);
+export function exportAttempts(attempts: Attempt[]): void {
+  const data = JSON.stringify(attempts, null, 2);
   const blob = new Blob([data], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

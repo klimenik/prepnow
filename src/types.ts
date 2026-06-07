@@ -54,6 +54,8 @@ export interface Response {
   prompt: string;
   selected: string[];
   correct: string[];
+  selectedText: string[];
+  correctText: string[];
   isCorrect: boolean;
 }
 
@@ -62,6 +64,8 @@ export interface Attempt {
   quizId: string;
   quizTitle: string;
   courseId?: string;
+  /** Manifest-relative path the quiz was loaded from (enables retake). Absent for local-file quizzes. */
+  sourcePath?: string;
   startedAt: string;
   finishedAt: string;
   total: number;

@@ -11,7 +11,7 @@ import { DEFAULT_CONTENT_BASE } from "../config";
 
 interface Props {
   attempts: Attempt[];
-  onStartQuiz: (quiz: Quiz) => void;
+  onStartQuiz: (quiz: Quiz, sourcePath?: string) => void;
   onOpenHistory: () => void;
 }
 
@@ -44,7 +44,7 @@ export function Home({ attempts, onStartQuiz, onOpenHistory }: Props) {
     setLoadingQuizId(mq.id);
     try {
       const quiz = await fetchQuiz(mq.path);
-      onStartQuiz(quiz);
+      onStartQuiz(quiz, mq.path);
     } catch (e) {
       alert("Could not load quiz: " + (e as Error).message);
     } finally {
@@ -74,16 +74,13 @@ export function Home({ attempts, onStartQuiz, onOpenHistory }: Props) {
   return (
     <div className="home">
       <header className="home-header">
-        <div>
-          <h1 className="brand">PrepNow</h1>
-          <p className="tagline">Practice quizzes for your courses</p>
-        </div>
+        <p className="tagline">Practice quizzes for your courses</p>
         <div className="header-actions">
           <button className="btn" onClick={onOpenHistory}>
             History{attempts.length > 0 && <span className="count">{attempts.length}</span>}
           </button>
-          <button className="icon-btn" title="Settings" onClick={() => setShowSettings((s) => !s)}>
-            ⚙
+          <button className="btn" onClick={() => setShowSettings((s) => !s)}>
+            Settings
           </button>
         </div>
       </header>
@@ -101,10 +98,7 @@ export function Home({ attempts, onStartQuiz, onOpenHistory }: Props) {
             <button className="btn primary" onClick={saveSettings}>
               Save & reload
             </button>
-            <button
-              className="btn"
-              onClick={() => setBaseInput(DEFAULT_CONTENT_BASE)}
-            >
+            <button className="btn" onClick={() => setBaseInput(DEFAULT_CONTENT_BASE)}>
               Reset to default
             </button>
             <button className="btn" onClick={() => fileRef.current?.click()}>
@@ -176,6 +170,11 @@ export function Home({ attempts, onStartQuiz, onOpenHistory }: Props) {
             </div>
           </section>
         ))}
+
+      <footer className="home-footer">
+        Independent study tool. Not affiliated with or endorsed by ServiceNow, Inc.
+        Trademarks belong to their respective owners.
+      </footer>
     </div>
   );
 }

@@ -1,17 +1,21 @@
 import { useMemo, useState } from "react";
 import type { Attempt, Quiz as QuizType, Response } from "../types";
 import { isAnswerCorrect } from "../lib/grading";
+import { shuffle } from "../lib/shuffle";
 import { newId } from "../lib/storage";
 import { Markdown } from "./Markdown";
 import { ProgressBar } from "./ProgressBar";
 
 interface Props {
   quiz: QuizType;
+  sourcePath?: string;
   onFinish: (attempt: Attempt) => void;
   onExit: () => void;
 }
 
-export function Quiz({ quiz, onFinish, onExit }: Props) {
+const LETTERS = "ABCDEFGH";
+
+export function Quiz({ quiz, sourcePath, onFinish, onExit }: Props) {
   const startedAt = useMemo(() => new Date().toISOString(), []);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
@@ -22,6 +26,23 @@ export function Quiz({ quiz, onFinish, onExit }: Props) {
   const question = quiz.questions[index];
   const isLast = index === total - 1;
   const correct = isAnswerCorrect(question, selected);
+
+  // How many answers must be selected before Submit is allowed.
+  const required = question.type === "single" ? 1 : question.correct.length;
+
+  // Shuffle choices once per question (re-shuffles each attempt since the
+  // component remounts when a quiz is (re)started).
+  const displayChoices = useMemo(
+    () => shuffle(question.choices),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [question.id],
+  );
+
+  const textForKey = (key: string) =>
+    question.choices.find((c) => c.key === key)?.text ?? key;
+  const letterForKey = (key: string) =>
+    LETTERS[displayChoices.findIndex((c) => c.key === key)] ?? "?";
+  const correctLetters = question.correct.map(letterForKey).sort().join(", ");
 
   function toggle(key: string) {
     if (submitted) return;
@@ -35,14 +56,18 @@ export function Quiz({ quiz, onFinish, onExit }: Props) {
   }
 
   function submit() {
-    if (selected.length === 0 || submitted) return;
+    if (selected.length !== required || submitted) return;
+    const sortedSelected = [...selected].sort();
+    const sortedCorrect = [...question.correct].sort();
     setResponses((prev) => [
       ...prev,
       {
         questionId: question.id,
         prompt: question.prompt,
-        selected: [...selected].sort(),
-        correct: [...question.correct].sort(),
+        selected: sortedSelected,
+        correct: sortedCorrect,
+        selectedText: sortedSelected.map(textForKey),
+        correctText: sortedCorrect.map(textForKey),
         isCorrect: correct,
       },
     ]);
@@ -66,6 +91,7 @@ export function Quiz({ quiz, onFinish, onExit }: Props) {
       quizId: quiz.id,
       quizTitle: quiz.title,
       courseId: quiz.course,
+      sourcePath,
       startedAt,
       finishedAt: new Date().toISOString(),
       total,
@@ -104,9 +130,7 @@ export function Quiz({ quiz, onFinish, onExit }: Props) {
             </span>
           )}
           {question.type === "multi" && (
-            <span className="badge badge-multi">
-              Choose {question.correct.length}
-            </span>
+            <span className="badge badge-multi">Choose {required}</span>
           )}
         </div>
 
@@ -115,14 +139,14 @@ export function Quiz({ quiz, onFinish, onExit }: Props) {
         </h2>
 
         <div className="choices">
-          {question.choices.map((c) => (
+          {displayChoices.map((c, i) => (
             <button
               key={c.key}
               className={choiceClass(c.key)}
               onClick={() => toggle(c.key)}
               disabled={submitted}
             >
-              <span className="choice-key">{c.key}</span>
+              <span className="choice-key">{LETTERS[i]}</span>
               <span className="choice-text">
                 <Markdown text={c.text} />
               </span>
@@ -132,19 +156,23 @@ export function Quiz({ quiz, onFinish, onExit }: Props) {
 
         {submitted && (
           <div className={`feedback ${correct ? "ok" : "bad"}`}>
-            <div className="feedback-head">
-              {correct ? "✓ Correct" : "✗ Incorrect"}
-              {!correct && (
-                <span className="feedback-answer">
-                  {" "}
-                  · Correct answer: {question.correct.join(", ")}
-                </span>
-              )}
-            </div>
-            {question.explanation && (
-              <p className="explanation">
-                <Markdown text={question.explanation} />
-              </p>
+            {correct ? (
+              <div className="feedback-head">✓ Correct</div>
+            ) : (
+              <>
+                <div className="feedback-head">
+                  ✗ Incorrect
+                  <span className="feedback-answer">
+                    {" "}
+                    · Correct answer{question.correct.length > 1 ? "s" : ""}: {correctLetters}
+                  </span>
+                </div>
+                {question.explanation && (
+                  <p className="explanation">
+                    <Markdown text={question.explanation} />
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
@@ -152,11 +180,7 @@ export function Quiz({ quiz, onFinish, onExit }: Props) {
 
       <div className="quiz-actions">
         {!submitted ? (
-          <button
-            className="btn primary"
-            onClick={submit}
-            disabled={selected.length === 0}
-          >
+          <button className="btn primary" onClick={submit} disabled={selected.length !== required}>
             Submit
           </button>
         ) : (
