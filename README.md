@@ -20,7 +20,7 @@ content repo, and history is stored in your browser.
 ## Content source
 
 The app fetches questions from the
-[servicenow-university-questions](https://github.com/klimenik/servicenow-university-questions)
+[snu-questions](https://github.com/klimenik/snu-questions)
 repo (served via GitHub Pages). The format is generic, so any compatible JSON question bank
 works. Change the source URL in **Settings (⚙)**, or use **Load local quiz file** to run a
 quiz from disk without any network.

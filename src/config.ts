@@ -3,7 +3,7 @@
 // in localStorage under CONTENT_BASE_KEY.
 
 export const DEFAULT_CONTENT_BASE =
-  "https://klimenik.github.io/servicenow-university-questions/";
+  "https://klimenik.github.io/snu-questions/";
 
 export const CONTENT_BASE_KEY = "prepnow.contentBaseUrl";
 export const ATTEMPTS_KEY = "prepnow.attempts";
