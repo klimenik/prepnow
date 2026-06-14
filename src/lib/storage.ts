@@ -1,5 +1,5 @@
-import type { Attempt } from "../types";
-import { ATTEMPTS_KEY } from "../config";
+import type { Attempt, PausedSession } from "../types";
+import { ATTEMPTS_KEY, PAUSED_KEY } from "../config";
 
 export function loadAttempts(): Attempt[] {
   try {
@@ -58,6 +58,33 @@ export function importAttempts(text: string): Attempt[] {
   );
   saveAll(merged);
   return merged;
+}
+
+// ---------- paused sessions (one per quiz, keyed by quizId) ----------
+
+export function loadPausedSessions(): Record<string, PausedSession> {
+  try {
+    const raw = localStorage.getItem(PAUSED_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, PausedSession>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function savePausedSession(session: PausedSession): void {
+  const all = loadPausedSessions();
+  all[session.quizId] = session;
+  localStorage.setItem(PAUSED_KEY, JSON.stringify(all));
+}
+
+export function deletePausedSession(quizId: string): void {
+  const all = loadPausedSessions();
+  if (quizId in all) {
+    delete all[quizId];
+    localStorage.setItem(PAUSED_KEY, JSON.stringify(all));
+  }
 }
 
 export function newId(): string {

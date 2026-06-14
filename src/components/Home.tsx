@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Attempt, Manifest, ManifestQuiz, Quiz } from "../types";
+import type { Attempt, Manifest, ManifestQuiz, PausedSession, Quiz } from "../types";
 import {
   fetchManifest,
   fetchQuiz,
@@ -11,11 +11,13 @@ import { DEFAULT_CONTENT_BASE } from "../config";
 
 interface Props {
   attempts: Attempt[];
+  paused: Record<string, PausedSession>;
   onStartQuiz: (quiz: Quiz, sourcePath?: string) => void;
+  onResumeQuiz: (quiz: Quiz, sourcePath: string | undefined, session: PausedSession) => void;
   onOpenHistory: () => void;
 }
 
-export function Home({ attempts, onStartQuiz, onOpenHistory }: Props) {
+export function Home({ attempts, paused, onStartQuiz, onResumeQuiz, onOpenHistory }: Props) {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,18 @@ export function Home({ attempts, onStartQuiz, onOpenHistory }: Props) {
     try {
       const quiz = await fetchQuiz(mq.path);
       onStartQuiz(quiz, mq.path);
+    } catch (e) {
+      alert("Could not load quiz: " + (e as Error).message);
+    } finally {
+      setLoadingQuizId(null);
+    }
+  }
+
+  async function resumeFromManifest(mq: ManifestQuiz, session: PausedSession) {
+    setLoadingQuizId(mq.id);
+    try {
+      const quiz = await fetchQuiz(mq.path);
+      onResumeQuiz(quiz, mq.path, session);
     } catch (e) {
       alert("Could not load quiz: " + (e as Error).message);
     } finally {
@@ -147,23 +161,66 @@ export function Home({ attempts, onStartQuiz, onOpenHistory }: Props) {
             <div className="quiz-grid">
               {course.quizzes.map((mq) => {
                 const best = bestScore(mq.id);
+                const session = paused[mq.id];
+                const isLoading = loadingQuizId === mq.id;
+                const bestClass =
+                  best == null
+                    ? ""
+                    : best >= 80
+                      ? "score-good"
+                      : best >= 60
+                        ? "score-mid"
+                        : "score-bad";
+                const meta = (
+                  <span className="quiz-card-meta">
+                    {mq.questionCount != null && <span>{mq.questionCount} questions</span>}
+                    {best != null && <span className={`best ${bestClass}`}>best {best}%</span>}
+                  </span>
+                );
+
+                // A paused session shows Resume + Restart; otherwise the whole
+                // card is a single Start button (existing behaviour).
+                if (session) {
+                  const done = session.responses.length;
+                  return (
+                    <div key={mq.id} className="card quiz-card">
+                      <span className="quiz-card-title">{mq.title}</span>
+                      {meta}
+                      <span className="quiz-card-paused">
+                        Paused · {done}
+                        {mq.questionCount != null ? `/${mq.questionCount}` : ""} answered
+                      </span>
+                      <div className="quiz-card-actions">
+                        <button
+                          className="btn primary"
+                          onClick={() => resumeFromManifest(mq, session)}
+                          disabled={isLoading}
+                        >
+                          Resume
+                        </button>
+                        <button
+                          className="btn"
+                          onClick={() => startFromManifest(mq)}
+                          disabled={isLoading}
+                        >
+                          Restart
+                        </button>
+                      </div>
+                      {isLoading && <span className="quiz-card-loading">Loading…</span>}
+                    </div>
+                  );
+                }
+
                 return (
                   <button
                     key={mq.id}
                     className="card quiz-card"
                     onClick={() => startFromManifest(mq)}
-                    disabled={loadingQuizId === mq.id}
+                    disabled={isLoading}
                   >
                     <span className="quiz-card-title">{mq.title}</span>
-                    <span className="quiz-card-meta">
-                      {mq.questionCount != null && <span>{mq.questionCount} questions</span>}
-                      {best != null && (
-                        <span className={`best ${best >= 80 ? "score-good" : best >= 60 ? "score-mid" : "score-bad"}`}>
-                          best {best}%
-                        </span>
-                      )}
-                    </span>
-                    {loadingQuizId === mq.id && <span className="quiz-card-loading">Loading…</span>}
+                    {meta}
+                    {isLoading && <span className="quiz-card-loading">Loading…</span>}
                   </button>
                 );
               })}

@@ -59,6 +59,23 @@ export interface Response {
   isCorrect: boolean;
 }
 
+// In-progress quiz that was paused (persisted in localStorage, one per quiz).
+// Fidelity is "order + position only": we keep the shuffled question order and
+// the answers given so far, and resume at the next unanswered question.
+export interface PausedSession {
+  quizId: string;
+  quizTitle: string;
+  courseId?: string;
+  /** Manifest-relative path the quiz was loaded from (required to reload it). */
+  sourcePath?: string;
+  startedAt: string;
+  updatedAt: string;
+  /** Question ids in the shuffled order chosen for this session. */
+  order: string[];
+  /** Answers recorded so far; its length is the next-question index. */
+  responses: Response[];
+}
+
 export interface Attempt {
   id: string;
   quizId: string;

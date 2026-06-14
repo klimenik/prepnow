@@ -1,38 +1,75 @@
-import { useMemo, useState } from "react";
-import type { Attempt, Quiz as QuizType, Response } from "../types";
+import { useEffect, useMemo, useState } from "react";
+import type { Attempt, PausedSession, Quiz as QuizType, Response } from "../types";
 import { isAnswerCorrect } from "../lib/grading";
 import { shuffle } from "../lib/shuffle";
-import { newId } from "../lib/storage";
+import { deletePausedSession, newId, savePausedSession } from "../lib/storage";
 import { Markdown } from "./Markdown";
 import { ProgressBar } from "./ProgressBar";
 
 interface Props {
   quiz: QuizType;
   sourcePath?: string;
+  /** When present, resume this paused session instead of starting fresh. */
+  resume?: PausedSession;
   onFinish: (attempt: Attempt) => void;
   onExit: () => void;
 }
 
 const LETTERS = "ABCDEFGH";
 
-export function Quiz({ quiz, sourcePath, onFinish, onExit }: Props) {
-  const startedAt = useMemo(() => new Date().toISOString(), []);
-  const [index, setIndex] = useState(0);
+export function Quiz({ quiz, sourcePath, resume, onFinish, onExit }: Props) {
+  // Present questions in a random order. When resuming, reuse the order the
+  // session was started with so already-answered questions line up; otherwise
+  // shuffle once per mount (re-shuffles each fresh attempt).
+  const questions = useMemo(() => {
+    if (resume) {
+      const byId = new Map(quiz.questions.map((q) => [q.id, q]));
+      const ordered = resume.order
+        .map((id) => byId.get(id))
+        .filter((q): q is NonNullable<typeof q> => q != null);
+      const seen = new Set(resume.order);
+      const added = quiz.questions.filter((q) => !seen.has(q.id));
+      return [...ordered, ...added];
+    }
+    return shuffle(quiz.questions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quiz.id]);
+
+  const total = questions.length;
+
+  const startedAt = useMemo(
+    () => resume?.startedAt ?? new Date().toISOString(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  // Resume at the first unanswered question (order + position fidelity).
+  const [index, setIndex] = useState(
+    resume ? Math.min(resume.responses.length, Math.max(total - 1, 0)) : 0,
+  );
   const [selected, setSelected] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
-  const [responses, setResponses] = useState<Response[]>([]);
+  const [responses, setResponses] = useState<Response[]>(resume?.responses ?? []);
   // The question reference key is hidden until revealed (double-click the prompt).
   const [showKey, setShowKey] = useState(false);
 
-  // Present questions in a random order, shuffled once per mount (re-shuffles
-  // each attempt since the component remounts when a quiz is (re)started).
-  const questions = useMemo(
-    () => shuffle(quiz.questions),
+  // Auto-save progress as a paused session after each answered question, so the
+  // quiz is resumable even if the tab is closed. Completed quizzes clear it (see
+  // finish()); an unstarted quiz has nothing worth resuming.
+  useEffect(() => {
+    if (responses.length === 0 || responses.length >= total) return;
+    savePausedSession({
+      quizId: quiz.id,
+      quizTitle: quiz.title,
+      courseId: quiz.course,
+      sourcePath,
+      startedAt,
+      updatedAt: new Date().toISOString(),
+      order: questions.map((q) => q.id),
+      responses,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [quiz.id],
-  );
+  }, [responses]);
 
-  const total = questions.length;
   const question = questions[index];
   const isLast = index === total - 1;
   const correct = isAnswerCorrect(question, selected);
@@ -96,6 +133,7 @@ export function Quiz({ quiz, sourcePath, onFinish, onExit }: Props) {
   }
 
   function finish() {
+    deletePausedSession(quiz.id);
     const correctCount = responses.filter((r) => r.isCorrect).length;
     const attempt: Attempt = {
       id: newId(),
@@ -125,8 +163,12 @@ export function Quiz({ quiz, sourcePath, onFinish, onExit }: Props) {
   return (
     <div className="quiz">
       <div className="quiz-top">
-        <button className="link-btn" onClick={onExit}>
-          ← Exit
+        <button
+          className="link-btn"
+          onClick={onExit}
+          title="Your progress is saved; resume this quiz later from the list"
+        >
+          ← Pause &amp; exit
         </button>
         <span className="quiz-title">{quiz.title}</span>
       </div>

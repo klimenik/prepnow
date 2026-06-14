@@ -292,6 +292,18 @@ code {
   color: var(--accent);
   font-size: 0.82rem;
 }
+.quiz-card-paused {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.quiz-card-actions {
+  display: flex;
+  gap: 8px;
+}
+.quiz-card-actions .btn {
+  flex: 1;
+}
 .best {
   font-weight: 700;
 }
