@@ -21,9 +21,19 @@ export function Quiz({ quiz, sourcePath, onFinish, onExit }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [responses, setResponses] = useState<Response[]>([]);
+  // The question reference key is hidden until revealed (double-click the prompt).
+  const [showKey, setShowKey] = useState(false);
 
-  const total = quiz.questions.length;
-  const question = quiz.questions[index];
+  // Present questions in a random order, shuffled once per mount (re-shuffles
+  // each attempt since the component remounts when a quiz is (re)started).
+  const questions = useMemo(
+    () => shuffle(quiz.questions),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [quiz.id],
+  );
+
+  const total = questions.length;
+  const question = questions[index];
   const isLast = index === total - 1;
   const correct = isAnswerCorrect(question, selected);
 
@@ -82,6 +92,7 @@ export function Quiz({ quiz, sourcePath, onFinish, onExit }: Props) {
     setIndex((i) => i + 1);
     setSelected([]);
     setSubmitted(false);
+    setShowKey(false);
   }
 
   function finish() {
@@ -124,6 +135,11 @@ export function Quiz({ quiz, sourcePath, onFinish, onExit }: Props) {
 
       <div className="card question-card">
         <div className="question-meta">
+          {showKey && (
+            <span className="badge badge-key" title="Question reference key">
+              {question.id}
+            </span>
+          )}
           {question.difficulty && (
             <span className={`badge badge-${question.difficulty}`}>
               {question.difficulty}
@@ -134,7 +150,11 @@ export function Quiz({ quiz, sourcePath, onFinish, onExit }: Props) {
           )}
         </div>
 
-        <h2 className="prompt">
+        <h2
+          className="prompt"
+          onDoubleClick={() => setShowKey((v) => !v)}
+          title="Double-click to show the question reference key"
+        >
           <Markdown text={question.prompt} />
         </h2>
 

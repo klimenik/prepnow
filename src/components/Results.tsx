@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import type { Attempt } from "../types";
 import { formatDateTime } from "../lib/format";
 import { Markdown } from "./Markdown";
@@ -20,6 +20,15 @@ export function Results({ attempt, onRetake, onHome, backLabel = "Home" }: Props
   const { correctCount, total, scorePct } = attempt;
   const wrong = total - correctCount;
   const donutStyle = { ["--pct" as string]: scorePct } as CSSProperties;
+
+  // Reference keys are hidden until revealed (double-click a breakdown item).
+  const [revealed, setRevealed] = useState<Set<number>>(new Set());
+  const toggleKey = (i: number) =>
+    setRevealed((prev) => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
 
   return (
     <div className="results">
@@ -57,9 +66,19 @@ export function Results({ attempt, onRetake, onHome, backLabel = "Home" }: Props
       <h3 className="breakdown-title">Question breakdown</h3>
       <ol className="breakdown">
         {attempt.responses.map((r, i) => (
-          <li key={r.questionId} className={`card breakdown-item ${r.isCorrect ? "ok" : "bad"}`}>
+          <li
+            key={r.questionId}
+            className={`card breakdown-item ${r.isCorrect ? "ok" : "bad"}`}
+            onDoubleClick={() => toggleKey(i)}
+            title="Double-click to show the question reference key"
+          >
             <div className="breakdown-head">
               <span className="breakdown-num">Q{i + 1}</span>
+              {revealed.has(i) && (
+                <span className="badge badge-key" title="Question reference key">
+                  {r.questionId}
+                </span>
+              )}
               <span className={`pill ${r.isCorrect ? "pill-ok" : "pill-bad"}`}>
                 {r.isCorrect ? "Correct" : "Incorrect"}
               </span>

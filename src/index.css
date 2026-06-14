@@ -376,6 +376,11 @@ code {
   color: var(--accent);
   border-color: var(--accent);
 }
+.badge-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: none;
+  letter-spacing: 0;
+}
 
 .prompt {
   font-size: 1.2rem;
