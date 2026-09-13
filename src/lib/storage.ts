@@ -1,5 +1,5 @@
-import type { Attempt, PausedSession } from "../types";
-import { ATTEMPTS_KEY, PAUSED_KEY } from "../config";
+import type { Attempt, PausedSession, Quiz } from "../types";
+import { ATTEMPTS_KEY, DRILL_KEY, PAUSED_KEY } from "../config";
 
 export function loadAttempts(): Attempt[] {
   try {
@@ -85,6 +85,28 @@ export function deletePausedSession(quizId: string): void {
     delete all[quizId];
     localStorage.setItem(PAUSED_KEY, JSON.stringify(all));
   }
+}
+
+// ---------- generated drills ----------
+// A drill is assembled on the fly rather than fetched from the question bank,
+// so the generated quiz itself is persisted; without it a paused drill could
+// not be rebuilt (the next generation would pick a different set of questions).
+
+export function loadDrillQuizzes(): Record<string, Quiz> {
+  try {
+    const raw = localStorage.getItem(DRILL_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, Quiz>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveDrillQuiz(quiz: Quiz): void {
+  const all = loadDrillQuizzes();
+  all[quiz.id] = quiz;
+  localStorage.setItem(DRILL_KEY, JSON.stringify(all));
 }
 
 export function newId(): string {

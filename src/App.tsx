@@ -3,8 +3,10 @@ import type { Attempt, PausedSession, Quiz } from "./types";
 import {
   deletePausedSession,
   loadAttempts,
+  loadDrillQuizzes,
   loadPausedSessions,
   saveAttempt,
+  saveDrillQuiz,
 } from "./lib/storage";
 import { fetchQuiz } from "./lib/content";
 import { Home } from "./components/Home";
@@ -25,12 +27,21 @@ export default function App() {
   const [paused, setPaused] = useState<Record<string, PausedSession>>(() =>
     loadPausedSessions(),
   );
+  const [drills, setDrills] = useState<Record<string, Quiz>>(() => loadDrillQuizzes());
 
   // Start fresh: discard any paused session for this quiz so a clean run begins.
   function startQuiz(quiz: Quiz, sourcePath?: string) {
     deletePausedSession(quiz.id);
     setPaused(loadPausedSessions());
     setView({ name: "quiz", quiz, sourcePath });
+  }
+
+  // A drill is generated, not fetched, so the question set is persisted before
+  // the run starts; otherwise a paused drill could not be rebuilt on resume.
+  function startDrill(quiz: Quiz) {
+    saveDrillQuiz(quiz);
+    setDrills(loadDrillQuizzes());
+    startQuiz(quiz);
   }
 
   function resumeQuiz(quiz: Quiz, sourcePath: string | undefined, session: PausedSession) {
@@ -53,8 +64,8 @@ export default function App() {
   async function retakeAttempt(attempt: Attempt) {
     if (!attempt.sourcePath) {
       alert(
-        "This quiz was loaded from a local file, so it can't be reloaded automatically. " +
-          "Open it again from Settings → Load local quiz file.",
+        "This attempt has no source in the question bank (a local file or a generated drill), " +
+          "so it can't be reloaded automatically. Start it again from the home screen.",
       );
       return;
     }
@@ -79,8 +90,10 @@ export default function App() {
         <Home
           attempts={attempts}
           paused={paused}
+          drills={drills}
           onStartQuiz={startQuiz}
           onResumeQuiz={resumeQuiz}
+          onStartDrill={startDrill}
           onOpenHistory={() => setView({ name: "history" })}
         />
       )}

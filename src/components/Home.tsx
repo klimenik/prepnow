@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { Attempt, Manifest, ManifestQuiz, PausedSession, Quiz } from "../types";
 import {
   fetchManifest,
@@ -8,16 +8,29 @@ import {
   setContentBase,
 } from "../lib/content";
 import { DEFAULT_CONTENT_BASE } from "../config";
+import { drillQuizId } from "../lib/drill";
+import { Drill } from "./Drill";
 
 interface Props {
   attempts: Attempt[];
   paused: Record<string, PausedSession>;
   onStartQuiz: (quiz: Quiz, sourcePath?: string) => void;
   onResumeQuiz: (quiz: Quiz, sourcePath: string | undefined, session: PausedSession) => void;
+  onStartDrill: (quiz: Quiz) => void;
   onOpenHistory: () => void;
+  /** Generated drill quizzes, kept so a paused drill can be resumed. */
+  drills: Record<string, Quiz>;
 }
 
-export function Home({ attempts, paused, onStartQuiz, onResumeQuiz, onOpenHistory }: Props) {
+export function Home({
+  attempts,
+  paused,
+  drills,
+  onStartQuiz,
+  onResumeQuiz,
+  onStartDrill,
+  onOpenHistory,
+}: Props) {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +168,16 @@ export function Home({ attempts, paused, onStartQuiz, onResumeQuiz, onOpenHistor
 
       {manifest &&
         manifest.courses.map((course) => (
-          <section key={course.id} className="course">
+          <Fragment key={course.id}>
+            <Drill
+              course={course}
+              attempts={attempts}
+              paused={paused[drillQuizId(course.id)]}
+              pausedQuiz={drills[drillQuizId(course.id)]}
+              onStart={onStartDrill}
+              onResume={(quiz, session) => onResumeQuiz(quiz, undefined, session)}
+            />
+            <section className="course">
             <h2 className="course-title">{course.title}</h2>
             {course.description && <p className="course-desc">{course.description}</p>}
             <div className="quiz-grid">
@@ -225,7 +247,8 @@ export function Home({ attempts, paused, onStartQuiz, onResumeQuiz, onOpenHistor
                 );
               })}
             </div>
-          </section>
+            </section>
+          </Fragment>
         ))}
 
       <footer className="home-footer">

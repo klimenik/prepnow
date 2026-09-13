@@ -8,3 +8,5 @@ export const DEFAULT_CONTENT_BASE =
 export const CONTENT_BASE_KEY = "prepnow.contentBaseUrl";
 export const ATTEMPTS_KEY = "prepnow.attempts";
 export const PAUSED_KEY = "prepnow.paused";
+// The most recently generated drill, kept so a paused drill can be resumed.
+export const DRILL_KEY = "prepnow.drill";
