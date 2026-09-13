@@ -221,20 +221,20 @@ export function Quiz({ quiz, sourcePath, resume, onFinish, onExit }: Props) {
             {correct ? (
               <div className="feedback-head">✓ Correct</div>
             ) : (
-              <>
-                <div className="feedback-head">
-                  ✗ Incorrect
-                  <span className="feedback-answer">
-                    {" "}
-                    · Correct answer{question.correct.length > 1 ? "s" : ""}: {correctLetters}
-                  </span>
-                </div>
-                {question.explanation && (
-                  <p className="explanation">
-                    <Markdown text={question.explanation} />
-                  </p>
-                )}
-              </>
+              <div className="feedback-head">
+                ✗ Incorrect
+                <span className="feedback-answer">
+                  {" "}
+                  · Correct answer{question.correct.length > 1 ? "s" : ""}: {correctLetters}
+                </span>
+              </div>
+            )}
+            {/* Also shown when the answer was right: a lucky guess should still
+                surface the reasoning behind it. */}
+            {question.explanation && (
+              <p className="explanation">
+                <Markdown text={question.explanation} />
+              </p>
             )}
           </div>
         )}
